@@ -1,7 +1,7 @@
 import os
 import requests
 import sys
-from libldap import LibLDAP 
+from libldap import LibLDAP, normalizar_uid
 
 # --- Configuración ---
 HEADSCALE_URL = os.getenv('HEADSCALE_URL')
@@ -23,13 +23,14 @@ def confirmar(mensaje):
 
 def obtener_id_headscale(uid):
     """Resuelve el ID numérico de un usuario a partir de su nombre."""
+    nombre_hs = normalizar_uid(uid)
     url = f"{HEADSCALE_URL}/api/v1/user"
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             usuarios = response.json().get('users', [])
             for u in usuarios:
-                if u['name'] == uid:
+                if u['name'] == nombre_hs:
                     return u['id']
     except Exception as e:
         print(f"⚠️ Error obteniendo ID de {uid}: {e}")

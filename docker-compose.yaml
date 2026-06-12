@@ -6,6 +6,7 @@ services:
     read_only: true
     tmpfs:
       - /var/run/headscale
+      - /tmp
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:9090:9090"

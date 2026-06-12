@@ -1,7 +1,7 @@
 import os
 import requests
 import sys
-from libldap import LibLDAP # Sustituye por el nombre de tu archivo .py
+from libldap import LibLDAP, normalizar_uid # Sustituye por el nombre de tu archivo .py
 
 # --- Configuración desde el entorno ---
 HEADSCALE_URL = os.getenv('HEADSCALE_URL')
@@ -28,18 +28,20 @@ def dar_alta_headscale(uid, nombre_completo, email, curso):
     """
     Crea el usuario con el esquema completo de la API.
     """
-    if usuario_existe(uid):
-        print(f"ℹ️ [OMITIDO] {uid} ya existe.")
+    nombre_hs = normalizar_uid(uid)       # Nombre válido para Headscale (ASCII)
+
+    if usuario_existe(nombre_hs):
+        print(f"ℹ️ [OMITIDO] {nombre_hs} ya existe.")
         return
 
     url = f"{HEADSCALE_URL}/api/v1/user"
-    
+
     # Formateamos el displayName según tu requisito
     display_name_formateado = f"{nombre_completo} ({curso})"
-    
+
     # Payload con la estructura que me has pasado
     payload = {
-        "name": uid,                      # El identificador (ej: josedom)
+        "name": nombre_hs,                # El identificador (ej: josedom)
         "displayName": display_name_formateado, # Nombre Completo (Curso)
         "email": email,                   # Correo electrónico
         "pictureUrl": ""                  # Opcional, lo dejamos vacío
@@ -48,9 +50,9 @@ def dar_alta_headscale(uid, nombre_completo, email, curso):
     try:
         response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200:
-            print(f"✅ [ALTA] {uid} registrado como: {display_name_formateado}")
+            print(f"✅ [ALTA] {nombre_hs} registrado como: {display_name_formateado}")
         else:
-            print(f"❌ [ERROR] {uid}: {response.status_code} - {response.text}")
+            print(f"❌ [ERROR] {nombre_hs}: {response.status_code} - {response.text}")
     except Exception as e:
         print(f"🔥 Error de conexión: {e}")
 
