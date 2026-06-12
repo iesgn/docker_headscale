@@ -36,6 +36,37 @@ def obtener_id_headscale(uid):
         print(f"⚠️ Error obteniendo ID de {uid}: {e}")
     return None
 
+def eliminar_nodos_de_usuario(user_id, uid):
+    """Borra todos los nodos asociados a un usuario.
+
+    Headscale no permite eliminar un usuario que aún tiene nodos
+    ('user not empty: node(s) found'), así que hay que borrarlos antes.
+    """
+    url = f"{HEADSCALE_URL}/api/v1/node"
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            print(f"⚠️  No se pudieron listar los nodos de {uid}: "
+                  f"{response.status_code} - {response.text}")
+            return
+
+        nodos = response.json().get('nodes', [])
+        # El nodo trae un objeto 'user' con su id; filtramos por ese id.
+        propios = [n for n in nodos
+                   if str(n.get('user', {}).get('id')) == str(user_id)]
+
+        for nodo in propios:
+            node_id = nodo['id']
+            node_name = nodo.get('name', node_id)
+            del_resp = requests.delete(f"{url}/{node_id}", headers=headers)
+            if del_resp.status_code == 200:
+                print(f"   🧹 [NODO] '{node_name}' (id {node_id}) eliminado.")
+            else:
+                print(f"   ❌ [NODO] No se pudo borrar '{node_name}': "
+                      f"{del_resp.status_code} - {del_resp.text}")
+    except Exception as e:
+        print(f"⚠️ Error eliminando nodos de {uid}: {e}")
+
 def eliminar_en_headscale(uid):
     """Llama a la API para eliminar un usuario por su ID numérico."""
     # La API de Headscale borra por ID numérico: DELETE /api/v1/user/{id}
@@ -43,6 +74,9 @@ def eliminar_en_headscale(uid):
     if user_id is None:
         print(f"ℹ️  [NOT FOUND] El usuario '{uid}' no existe en Headscale.")
         return
+
+    # Primero borramos sus nodos, si no Headscale rechaza el borrado.
+    eliminar_nodos_de_usuario(user_id, uid)
 
     url = f"{HEADSCALE_URL}/api/v1/user/{user_id}"
 
@@ -63,8 +97,12 @@ def main():
         return
 
     objetivo = sys.argv[1]
+
+    print("⚠️  AVISO: al borrar un usuario se eliminarán también TODOS sus "
+          "nodos registrados en Headscale.")
+
     ldap = LibLDAP()
-    
+
     # Caso 1: Es un Aula (Grupo)
     if objetivo in ldap.grupos:
         nombre_aula = ldap.grupos[objetivo]
