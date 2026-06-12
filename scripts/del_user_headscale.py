@@ -21,10 +21,29 @@ def confirmar(mensaje):
     respuesta = input(f"{mensaje} (s/n): ").lower()
     return respuesta == 's'
 
+def obtener_id_headscale(uid):
+    """Resuelve el ID numérico de un usuario a partir de su nombre."""
+    url = f"{HEADSCALE_URL}/api/v1/user"
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            usuarios = response.json().get('users', [])
+            for u in usuarios:
+                if u['name'] == uid:
+                    return u['id']
+    except Exception as e:
+        print(f"⚠️ Error obteniendo ID de {uid}: {e}")
+    return None
+
 def eliminar_en_headscale(uid):
-    """Llama a la API para eliminar un usuario por su nombre (ID)."""
-    # En la API de Headscale, el borrado suele ser DELETE /api/v1/user/{name}
-    url = f"{HEADSCALE_URL}/api/v1/user/{uid}"
+    """Llama a la API para eliminar un usuario por su ID numérico."""
+    # La API de Headscale borra por ID numérico: DELETE /api/v1/user/{id}
+    user_id = obtener_id_headscale(uid)
+    if user_id is None:
+        print(f"ℹ️  [NOT FOUND] El usuario '{uid}' no existe en Headscale.")
+        return
+
+    url = f"{HEADSCALE_URL}/api/v1/user/{user_id}"
 
     try:
         response = requests.delete(url, headers=headers)
